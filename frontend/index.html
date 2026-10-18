@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Athena — Multimodal Live Voice Assistant</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Mermaid for rendering diagrams -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: "#a3ff00", // Lime green from improv 1
+              surface: "#0a0a0a",
+              background: "#000000",
+              border: "rgba(255, 255, 255, 0.1)",
+              textMuted: "#888888",
+            },
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+              display: ['"Helvetica Neue"', "Arial", "sans-serif"],
+            },
+            letterSpacing: {
+              tighter: "-0.02em",
+            },
+            lineHeight: {
+              tight: "1.0",
+            },
+            boxShadow: {
+              glow: "0 0 30px rgba(163, 255, 0, 0.3)",
+              orb: "0 0 45px rgba(255, 255, 255, 0.1)",
+            },
+          },
+        },
+      };
+      mermaid.initialize({ startOnLoad: false, theme: "dark" });
+    </script>
+    <style>
+      body {
+        background-color: #000;
+        background-image: linear-gradient(
+          rgba(255, 255, 255, 0.03) 1px,
+          transparent 1px
+        );
+        background-size: 100% 4px;
+      }
+      @keyframes pulse-glow {
+        0%,
+        100% {
+          transform: scale(1);
+          filter: drop-shadow(0 0 15px rgba(163, 255, 0, 0.2));
+        }
+        50% {
+          transform: scale(1.05);
+          filter: drop-shadow(0 0 30px rgba(163, 255, 0, 0.4));
+        }
+      }
+      .orb-speaking {
+        animation: pulse-glow 2s ease-in-out infinite;
+      }
+      .glass-panel {
+        background: rgba(20, 20, 20, 0.6);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .tech-border {
+        position: relative;
+      }
+      .tech-border::before,
+      .tech-border::after {
+        content: "";
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        pointer-events: none;
+      }
+      .tech-border::before {
+        top: -1px;
+        left: -1px;
+        border-right: none;
+        border-bottom: none;
+      }
+      .tech-border::after {
+        bottom: -1px;
+        right: -1px;
+        border-left: none;
+        border-top: none;
+      }
+
+      /* Custom scrollbar */
+      ::-webkit-scrollbar {
+        width: 4px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #a3ff00;
+      }
+
+      .hero-heading {
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-weight: 300;
+        text-transform: uppercase;
+        line-height: 1;
+        letter-spacing: -0.02em;
+      }
+
+      .nav-text {
+        font-family: "Inter", sans-serif;
+        font-weight: 500;
+        font-size: 0.85rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body
+    class="text-white h-screen flex flex-col font-sans select-none overflow-hidden relative"
+  >
+    <!-- Top Navigation Header -->
+    <header
+      class="h-20 px-8 flex items-center justify-between z-20 border-b border-white/10 flex-shrink-0"
+    >
+      <div class="flex items-center gap-8">
+        <h1
+          class="hero-heading text-2xl font-bold tracking-tight text-white flex items-center gap-2"
+        >
+          AI <i data-lucide="target" class="w-5 h-5 text-white"></i> VOICE
+          AGENT
+        </h1>
+      </div>
+
+      <div class="flex items-center gap-5">
+        <!-- Live Status -->
+        <div
+          class="flex items-center gap-3 px-4 py-1.5 rounded-sm border border-white/10 bg-white/5"
+        >
+          <span
+            id="status-dot"
+            class="w-2.5 h-2.5 rounded-full bg-white/30"
+          ></span>
+          <span
+            id="status-text"
+            class="text-xs font-medium text-white/70 uppercase"
+            >Ready to Connect</span
+          >
+          <span class="text-white/20">|</span>
+          <span id="latency-text" class="text-xs text-white/40 font-mono"
+            >-- ms</span
+          >
+        </div>
+
+        <button
+          id="clear-chat-btn"
+          class="p-2.5 rounded-sm text-white/50 hover:text-white hover:bg-white/10 transition tech-border"
+          title="Clear Chat"
+        >
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main
+      class="flex-1 grid grid-cols-12 gap-8 p-8 min-h-0 overflow-hidden relative z-10"
+    >
+      <!-- Left Column: Conversational Transcript Log -->
+      <section
+        class="col-span-3 glass-panel rounded-xl p-5 flex flex-col min-h-0 h-full tech-border"
+      >
+        <div
+          class="flex items-center justify-between pb-4 border-b border-white/10 flex-shrink-0"
+        >
+          <div
+            class="flex items-center gap-2 text-white/80 font-medium text-xs uppercase tracking-widest"
+          >
+            <i data-lucide="message-square" class="w-4 h-4 text-primary"></i>
+            <span>Conversational Log</span>
+          </div>
+          <span id="message-count" class="text-xs text-white/40 font-mono"
+            >0 MSG</span
+          >
+        </div>
+
+        <!-- Messages Stream -->
+        <div
+          id="transcript-container"
+          class="flex-1 overflow-y-auto space-y-4 py-4 pr-2 text-sm min-h-0 font-light text-white/80"
+        >
+          <div
+            id="empty-transcript-hint"
+            class="text-center py-10 text-white/30 text-xs uppercase tracking-widest"
+          >
+            <i data-lucide="mic" class="w-6 h-6 mx-auto mb-3 opacity-30"></i>
+            Initiate voice link to begin
+          </div>
+        </div>
+      </section>
+
+      <!-- Center Column: Athena Voice Core & Waveform -->
+      <section
+        class="col-span-5 flex flex-col items-center justify-center relative min-h-0 h-full overflow-hidden"
+      >
+        <!-- Hero Text Background -->
+        <div
+          class="absolute inset-0 flex flex-col justify-center items-center pointer-events-none z-0"
+        >
+          <h1
+            class="hero-heading text-[120px] text-white/10 whitespace-nowrap opacity-50 tracking-tighter"
+          >
+            AI - VOICE
+          </h1>
+          <h1
+            class="hero-heading text-[120px] text-white/10 whitespace-nowrap opacity-50 tracking-tighter -mt-8"
+          >
+            AGENT
+          </h1>
+        </div>
+
+        <!-- Central Voice Status -->
+        <div
+          class="absolute top-0 left-0 w-full flex flex-col items-center justify-center z-20 flex-shrink-0"
+        >
+          <div
+            id="voice-state-pill"
+            class="px-5 py-2 rounded-sm bg-white/5 border border-white/10 text-xs font-medium text-white/60 flex items-center gap-2 uppercase tracking-widest tech-border"
+          >
+            <span class="w-2 h-2 bg-white/20"></span>
+            <span id="voice-state-label">System Offline</span>
+          </div>
+        </div>
+
+        <!-- Audio Waveform Canvas & Controls -->
+        <div
+          class="absolute bottom-0 left-0 w-full z-10 flex flex-col items-center gap-8 flex-shrink-0 mb-8"
+        >
+          <!-- Waveform Canvas -->
+          <canvas
+            id="waveform-canvas"
+            width="500"
+            height="60"
+            class="w-full max-w-md h-16 opacity-70 filter brightness-150 grayscale"
+          ></canvas>
+
+          <!-- Control Dock -->
+          <div class="flex items-center gap-4">
+            <button
+              id="mute-btn"
+              class="w-12 h-12 rounded-sm border border-white/10 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition flex items-center justify-center tech-border"
+              title="Mute Output"
+            >
+              <i id="mute-icon" data-lucide="volume-2" class="w-5 h-5"></i>
+            </button>
+
+            <!-- Primary Mic Toggle Button -->
+            <button
+              id="mic-toggle-btn"
+              class="w-56 h-12 bg-primary text-black font-semibold tracking-widest uppercase hover:bg-[#b4ff33] hover:shadow-glow active:scale-95 transition-all flex items-center justify-center gap-3 focus:outline-none"
+              style="
+                clip-path: polygon(
+                  8px 0,
+                  100% 0,
+                  100% calc(100% - 8px),
+                  calc(100% - 8px) 100%,
+                  0 100%,
+                  0 8px
+                );
+              "
+            >
+              <i id="mic-toggle-icon" data-lucide="mic" class="w-5 h-5"></i>
+              <span>Initialize</span>
+            </button>
+
+            <button
+              id="user-mic-btn"
+              class="w-12 h-12 rounded-sm border border-white/10 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition flex items-center justify-center tech-border"
+              title="Mute Microphone"
+            >
+              <i id="user-mic-icon" data-lucide="mic" class="w-5 h-5"></i>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Interactive Visual Canvas & Resource Links -->
+      <section
+        class="col-span-4 glass-panel rounded-xl p-5 flex flex-col min-h-0 h-full tech-border"
+      >
+        <div
+          class="flex items-center justify-between pb-4 border-b border-white/10 flex-shrink-0"
+        >
+          <div
+            class="flex items-center gap-2 text-white/80 font-medium text-xs uppercase tracking-widest"
+          >
+            <i data-lucide="monitor" class="w-4 h-4 text-primary"></i>
+            <span>Visual Canvas</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span
+              class="text-[10px] text-black bg-primary px-2 py-0.5 rounded-sm font-bold uppercase tracking-wider"
+              >Live Stream</span
+            >
+            <button
+              id="clear-visual-btn"
+              class="p-1.5 rounded-sm text-white/50 hover:text-white hover:bg-white/10 transition tech-border"
+              title="Clear Visual Canvas"
+            >
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Visual Content Stream -->
+        <div
+          id="visual-container"
+          class="flex-1 overflow-y-auto space-y-4 py-4 pr-2 min-h-0"
+        >
+          <div id="empty-visual-hint" class="text-center py-10 text-white/30 text-xs uppercase tracking-widest">
+            <i data-lucide="image" class="w-6 h-6 mx-auto mb-3 opacity-30"></i>
+            Visual Canvas Ready
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Client Script -->
+    <script src="main.js?v=7"></script>
+    <script>
+      lucide.createIcons();
+    </script>
+  </body>
+</html>
